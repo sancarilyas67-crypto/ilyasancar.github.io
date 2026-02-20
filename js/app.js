@@ -6,7 +6,40 @@ let debts = [];
 let recurring = [];
 let savings = [];
 
-const API_BASE = 'http://localhost:5001';
+// MOCK DATA - GitHub Pages'te kullanılacak
+const MOCK_MODE = true;
+
+const mockData = {
+  months: [
+    { id: 1, ad: "Ocak 2024", yil: 2024, acilis_bakiye: 5000, kapanis_bakiye: 0, aktif: 1 },
+    { id: 2, ad: "Şubat 2024", yil: 2024, acilis_bakiye: 5000, kapanis_bakiye: 0, aktif: 1 }
+  ],
+  transactions: [
+    { id: 1, ay_id: 1, aciklama: "Aylık Maaş", tutar: 5000, tur: "gelir", tarih: "2024-01-01", kategori_id: 1, sira: 0 },
+    { id: 2, ay_id: 1, aciklama: "Market Alışveriş", tutar: 500, tur: "gider", tarih: "2024-01-05", kategori_id: 2, sira: 1 },
+    { id: 3, ay_id: 1, aciklama: "Elektrik Faturası", tutar: 200, tur: "gider", tarih: "2024-01-10", kategori_id: 3, sira: 2 }
+  ],
+  categories: [
+    { id: 1, ad: "Maaş", tur: "gelir" },
+    { id: 2, ad: "Yiyecek", tur: "gider" },
+    { id: 3, ad: "Utilities", tur: "gider" },
+    { id: 4, ad: "Ulaşım", tur: "gider" },
+    { id: 5, ad: "Eğlence", tur: "gider" }
+  ],
+  debts: [
+    { id: 1, ad: "Araba Kredisi", toplam_tutar: 50000, kalan_tutar: 30000, para_birimi: "TRY", kredi_mi: 1, toplam_taksit: 60, odenmis_taksit: 30, taksit_tutari: 833.33 },
+    { id: 2, ad: "Arkadaş Borcu", toplam_tutar: 2000, kalan_tutar: 2000, para_birimi: "TRY", kredi_mi: 0, toplam_taksit: 0, odenmis_taksit: 0, taksit_tutari: 0 }
+  ],
+  recurring: [
+    { id: 1, ad: "Telefon Faturası", tutar: 150, tur: "gider", ay_gunu: 10, aktif: 1, kategori_id: 3, sira: 0 },
+    { id: 2, ad: "İnternet Faturası", tutar: 100, tur: "gider", ay_gunu: 15, aktif: 1, kategori_id: 3, sira: 1 }
+  ],
+  savings: [
+    { id: 1, ay_id: 1, para_birimi: "USD", tl_tutar: 3500, birim_miktar: 100, alis_kuru: 35, tarih: "2024-01-20" }
+  ]
+};
+
+const API_BASE = MOCK_MODE ? null : 'http://localhost:5001';
 
 // Utilities
 function formatCurrency(value) {
@@ -27,6 +60,10 @@ function getTodayDate() {
 
 // API Calls
 async function api(endpoint, method = 'GET', data = null) {
+  if (MOCK_MODE) {
+    return mockApi(endpoint, method, data);
+  }
+  
   const options = {
     method,
     headers: { 'Content-Type': 'application/json' }
@@ -41,6 +78,71 @@ async function api(endpoint, method = 'GET', data = null) {
     console.error('API Error:', err);
     return { error: err.message };
   }
+}
+
+// Mock API
+function mockApi(endpoint, method = 'GET', data = null) {
+  console.log(`Mock API: ${method} ${endpoint}`);
+  
+  if (endpoint === '/auth/status') {
+    return Promise.resolve({ authenticated: true });
+  }
+  if (endpoint === '/auth/login') {
+    return Promise.resolve({ success: true });
+  }
+  if (endpoint === '/auth/logout') {
+    return Promise.resolve({ success: true });
+  }
+  if (endpoint === '/api/months') {
+    return Promise.resolve(mockData.months);
+  }
+  if (endpoint.startsWith('/api/month/')) {
+    const id = parseInt(endpoint.split('/').pop());
+    const month = mockData.months.find(m => m.id === id);
+    if (!month) return Promise.resolve({});
+    return Promise.resolve({
+      ...month,
+      islemler: mockData.transactions.filter(t => t.ay_id === id),
+      borclar: mockData.debts,
+      duzenli: mockData.recurring,
+      birikimler: mockData.savings.filter(s => s.ay_id === id)
+    });
+  }
+  if (endpoint === '/api/categories') {
+    return Promise.resolve(mockData.categories);
+  }
+  if (endpoint === '/api/debts') {
+    return Promise.resolve(mockData.debts);
+  }
+  if (endpoint === '/api/recurring') {
+    return Promise.resolve(mockData.recurring);
+  }
+  if (endpoint.startsWith('/api/savings/')) {
+    const id = parseInt(endpoint.split('/').pop());
+    return Promise.resolve(mockData.savings.filter(s => s.ay_id === id));
+  }
+  if (endpoint === '/api/add_transaction') {
+    mockData.transactions.push({ ...data, id: Math.random() });
+    return Promise.resolve({ success: true });
+  }
+  if (endpoint === '/api/add_debt') {
+    mockData.debts.push({ ...data, id: Math.random() });
+    return Promise.resolve({ success: true });
+  }
+  if (endpoint === '/api/add_recurring') {
+    mockData.recurring.push({ ...data, id: Math.random() });
+    return Promise.resolve({ success: true });
+  }
+  if (endpoint === '/api/add_saving') {
+    mockData.savings.push({ ...data, id: Math.random() });
+    return Promise.resolve({ success: true });
+  }
+  if (endpoint === '/api/month') {
+    mockData.months.push({ ...data, id: Math.random() });
+    return Promise.resolve({ success: true });
+  }
+  
+  return Promise.resolve({ success: true });
 }
 
 // Auth
